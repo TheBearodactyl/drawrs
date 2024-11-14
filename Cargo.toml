@@ -1,0 +1,17 @@
+[package]
+name = "drawrs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+device_query = "1.1"
+enigo = "0.1"
+image = "0.24"
+native-dialog = "0.6"
+rayon = "1.7"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = 'abort'

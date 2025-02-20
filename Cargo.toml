@@ -2,13 +2,21 @@
 name = "drawrs"
 version = "0.1.0"
 edition = "2021"
+description = "A tracing engine for Rust"
+license = "MIT"
+repository = "https://github.com/thebearodactyl/drawrs"
+readme = "README.md"
+keywords = ["tracing", "drawing", "inputsim"]
+categories = ["command-line-utilities"]
 
 [dependencies]
-device_query = "1.1"
-enigo = "0.1"
-image = "0.24"
-native-dialog = "0.6"
-rayon = "1.7"
+anyhow = "1.0.96"
+device_query = "3.0"
+enigo = "0.3"
+image = "0.25"
+native-dialog = "0.7"
+num-traits = "0.2.19"
+rayon = "1.10"
 
 [profile.release]
 opt-level = 3

@@ -1,34 +1,7 @@
-use crate::picoseconds::DurExt;
-use inquiry::Choice;
+use crate::choice;
+use crate::choices::*;
+use crate::utils::duration::DurExt;
 use std::time::Duration;
-
-pub(crate) trait Description {
-    fn description(&self) -> &'static str;
-}
-
-#[macro_export]
-macro_rules! choice {
-    ($enum_name:ident, $($variant:ident => $desc:expr),+) => {
-	    #[derive(Debug, Copy, Clone, Choice, Ord, PartialOrd, Eq, PartialEq)]
-	    pub(crate) enum $enum_name {
-		    $($variant,)+
-	    }
-
-	    impl Description for $enum_name {
-		    fn description(&self) -> &'static str {
-			    match self {
-				    $($enum_name::$variant => $desc),+
-			    }
-		    }
-	    }
-
-	    impl std::fmt::Display for $enum_name {
-		    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-			    write!(f, "{}", self.description())
-		    }
-	    }
-    };
-}
 
 choice!(ScalingMode,
     Stretch => "Stretch - Fills entire region (may distort)",
@@ -58,11 +31,11 @@ choice!(DrawingSpeed,
 );
 
 choice!(LineOrder,
-	InOrder => "In Order - Draw each line in order",
-	Shuffled => "Shuffled - Shuffle the order of each drawn line before drawing"
+    InOrder => "In Order - Draw each line in order",
+    Shuffled => "Shuffled - Shuffle the order of each drawn line before drawing"
 );
 
-pub(crate) fn get_step(drawing_accuracy: DrawingAccuracy) -> i32 {
+pub fn get_step(drawing_accuracy: DrawingAccuracy) -> i32 {
     match drawing_accuracy {
         DrawingAccuracy::Fast => 3,
         DrawingAccuracy::Balanced => 2,
@@ -70,7 +43,7 @@ pub(crate) fn get_step(drawing_accuracy: DrawingAccuracy) -> i32 {
     }
 }
 
-pub(crate) fn get_speed(speed: DrawingSpeed) -> Duration {
+pub fn get_speed(speed: DrawingSpeed) -> Duration {
     match speed {
         DrawingSpeed::UniverseAnnihilating => {
             let confirmation = inquire::prompt_confirmation(
@@ -81,7 +54,7 @@ pub(crate) fn get_speed(speed: DrawingSpeed) -> Duration {
             if confirmation {
                 Duration::from_picos(1)
             } else {
-	            panic!("Cancelled operation");
+                panic!("Cancelled operation");
             }
         }
         DrawingSpeed::UltraFast => Duration::from_micros(1),

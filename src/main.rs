@@ -1,14 +1,14 @@
 use crate::choices::*;
 use device_query::{DeviceQuery, DeviceState};
-use enigo::{Enigo, MouseButton, MouseControllable};
+use enigo::{Enigo, Key, KeyboardControllable, MouseButton, MouseControllable};
 use image::{imageops::FilterType, DynamicImage, ImageBuffer, Luma};
 use indicatif::{ProgressBar, ProgressStyle};
 use native_dialog::FileDialog;
+use rand::seq::SliceRandom;
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::thread;
 use std::time::Duration;
-use rand::seq::SliceRandom;
 
 mod choices;
 mod picoseconds;
@@ -111,16 +111,16 @@ impl DrawingApp {
 
     fn process_image(
         image_path: &str,
-    ) -> Result<ImageBuffer<Luma<u8>, Vec<u8>>, Box<dyn std::error::Error>> {
+    ) -> Result<ImageBuffer<Luma<u16>, Vec<u16>>, Box<dyn std::error::Error>> {
         let img = image::open(image_path)?;
-        let gray_img = img.to_luma8();
+        let gray_img = img.to_luma16();
 
         let threshold = Self::calculate_otsu_threshold(&gray_img);
         let width = gray_img.width();
         let height = gray_img.height();
         let pixels: Vec<_> = gray_img.pixels().collect();
 
-        let binary_pixels: Vec<u8> = pixels
+        let binary_pixels: Vec<u16> = pixels
             .par_iter()
             .map(|pixel| if pixel[0] > threshold { 255 } else { 0 })
             .collect();
@@ -131,25 +131,25 @@ impl DrawingApp {
         Ok(binary_img)
     }
 
-    fn calculate_otsu_threshold(img: &ImageBuffer<Luma<u8>, Vec<u8>>) -> u8 {
-        let mut histogram = [0u32; 512];
+    fn calculate_otsu_threshold(img: &ImageBuffer<Luma<u16>, Vec<u16>>) -> u16 {
+        let mut histogram = [0u32; 65536];
         let total_pixels = img.width() * img.height();
 
         for pixel in img.pixels() {
             histogram[pixel[0] as usize] += 1;
         }
 
-        let mut best_threshold = 0u8;
+        let mut best_threshold = 0u16;
         let mut max_variance = 0.0;
 
-        for t in 0..512 {
+        for t in 0..65536 {
             let (w0, w1, mu0, mu1) = Self::calculate_class_statistics(&histogram, t, total_pixels);
 
             if w0 > 0.0 && w1 > 0.0 {
                 let between_class_variance = w0 * w1 * (mu0 - mu1).powi(2);
                 if between_class_variance > max_variance {
                     max_variance = between_class_variance;
-                    best_threshold = t as u8;
+                    best_threshold = t as u16;
                 }
             }
         }
@@ -158,7 +158,7 @@ impl DrawingApp {
     }
 
     fn calculate_class_statistics(
-        histogram: &[u32; 512],
+        histogram: &[u32; 65536],
         threshold: usize,
         total: u32,
     ) -> (f64, f64, f64, f64) {
@@ -194,11 +194,11 @@ impl DrawingApp {
     }
 
     fn scale_image_to_region(
-        img: &ImageBuffer<Luma<u8>, Vec<u8>>,
+        img: &ImageBuffer<Luma<u16>, Vec<u16>>,
         start_pos: (i32, i32),
         end_pos: (i32, i32),
         scaling_mode: ScalingMode,
-    ) -> ImageBuffer<Luma<u8>, Vec<u8>> {
+    ) -> ImageBuffer<Luma<u16>, Vec<u16>> {
         let region_width = (end_pos.0 - start_pos.0).unsigned_abs();
         let region_height = (end_pos.1 - start_pos.1).unsigned_abs();
 
@@ -214,9 +214,9 @@ impl DrawingApp {
         );
 
         match scaling_mode {
-            ScalingMode::Stretch => DynamicImage::ImageLuma8(img.clone())
+            ScalingMode::Stretch => DynamicImage::ImageLuma16(img.clone())
                 .resize_exact(region_width, region_height, FilterType::Lanczos3)
-                .to_luma8(),
+                .to_luma16(),
 
             ScalingMode::Fit => {
                 let scale_x = region_width as f64 / img_width as f64;
@@ -226,12 +226,12 @@ impl DrawingApp {
                 let new_width = (img_width as f64 * scale) as u32;
                 let new_height = (img_height as f64 * scale) as u32;
 
-                let scaled_img = DynamicImage::ImageLuma8(img.clone())
+                let scaled_img = DynamicImage::ImageLuma16(img.clone())
                     .resize(new_width, new_height, FilterType::Lanczos3)
-                    .to_luma8();
+                    .to_luma16();
 
                 let mut canvas =
-                    ImageBuffer::from_pixel(region_width, region_height, Luma([255u8]));
+                    ImageBuffer::from_pixel(region_width, region_height, Luma([255u16]));
                 let offset_x = (region_width - new_width) / 2;
                 let offset_y = (region_height - new_height) / 2;
 
@@ -252,9 +252,9 @@ impl DrawingApp {
                 let new_width = (img_width as f64 * scale) as u32;
                 let new_height = (img_height as f64 * scale) as u32;
 
-                let scaled_img = DynamicImage::ImageLuma8(img.clone())
+                let scaled_img = DynamicImage::ImageLuma16(img.clone())
                     .resize(new_width, new_height, FilterType::Lanczos3)
-                    .to_luma8();
+                    .to_luma16();
 
                 let crop_x = if new_width > region_width {
                     (new_width - region_width) / 2
@@ -274,7 +274,7 @@ impl DrawingApp {
                     if source_x < new_width && source_y < new_height {
                         *pixel = *scaled_img.get_pixel(source_x, source_y);
                     } else {
-                        *pixel = Luma([255u8]);
+                        *pixel = Luma([255u16]);
                     }
                 }
 
@@ -283,7 +283,7 @@ impl DrawingApp {
 
             ScalingMode::Center => {
                 let mut canvas =
-                    ImageBuffer::from_pixel(region_width, region_height, Luma([255u8]));
+                    ImageBuffer::from_pixel(region_width, region_height, Luma([255u16]));
                 let offset_x = if region_width > img_width {
                     (region_width - img_width) / 2
                 } else {
@@ -424,7 +424,7 @@ impl DrawingApp {
     }
 
     fn get_black_pixels_adaptive(
-        img: &ImageBuffer<Luma<u8>, Vec<u8>>,
+        img: &ImageBuffer<Luma<u16>, Vec<u16>>,
         step: i32,
     ) -> HashSet<Point> {
         let coordinates: Vec<(u32, u32)> = (0..img.height())
@@ -446,12 +446,33 @@ impl DrawingApp {
         black_pixels.into_iter().collect()
     }
 
+    fn mod_opac(&mut self, modifier: i32) {
+        for _ in 0..((modifier / 10).abs()) {
+            if modifier > 0 {
+                &self.enigo.key_click(Key::O);
+            } else {
+                &self.enigo.key_click(Key::I);
+            }
+        }
+    }
+
+    fn calc_opac_adj(brightness: u16) -> i32 {
+        if brightness <= 4096 {
+            0
+        } else if brightness <= 8192 {
+            -1
+        } else {
+            1
+        }
+    }
+
     fn draw_image_optimized(
         &mut self,
-        img: &ImageBuffer<Luma<u8>, Vec<u8>>,
+        img: &ImageBuffer<Luma<u16>, Vec<u16>>,
         start_pos: (i32, i32),
         drawing_speed: Duration,
         step: i32,
+        line_order: LineOrder,
     ) {
         println!("Drawing will start in 3 seconds. Keep your cursor still!");
         thread::sleep(Duration::from_secs(3));
@@ -466,14 +487,16 @@ impl DrawingApp {
 
         let mut lines = Self::find_connected_components_optimized(black_pixels, 3);
         println!("Generated {} drawing paths", lines.len());
-        let progress_style = ProgressStyle::default_bar().progress_chars("=>-");
+        let progress_style = ProgressStyle::default_bar().progress_chars("=>=");
         let pb = ProgressBar::new(lines.len() as u64);
         pb.set_style(progress_style);
 
         let total_lines = lines.len();
         let rng = rand::rng();
 
-        lines.shuffle(&mut rng.clone());
+        if line_order == LineOrder::Shuffled {
+            lines.shuffle(&mut rng.clone());
+        }
 
         for line in lines.iter() {
             if line.len() < 2 {
@@ -505,6 +528,18 @@ impl DrawingApp {
                         let abs_x = start_pos.0 + interp_x as i32;
                         let abs_y = start_pos.1 + interp_y as i32;
                         self.enigo.mouse_move_to(abs_x, abs_y);
+                        let brightness = img.get_pixel(current.x as u32, current.y as u32)[0];
+                        let adjustments = Self::calc_opac_adj(brightness);
+
+                        for _ in 0..adjustments.abs() {
+                            if adjustments < 0 {
+                                self.enigo.key_click(Key::I);
+                            } else {
+                                self.enigo.key_click(Key::O);
+                            }
+
+                            thread::sleep(drawing_speed);
+                        }
 
                         thread::sleep(drawing_speed);
                     }
@@ -515,6 +550,17 @@ impl DrawingApp {
 
                     if !drawing_speed.is_zero() {
                         thread::sleep(drawing_speed);
+                    }
+
+                    let brightness = img.get_pixel(next.x as u32, next.y as u32)[0];
+                    let adjustments = Self::calc_opac_adj(brightness);
+                    for _ in 0..adjustments.abs() {
+                        if adjustments < 0 {
+                            self.enigo.key_sequence("I");
+                        } else {
+                            self.enigo.key_sequence("O");
+                        }
+                        thread::sleep(Duration::from_millis(50)); // Delay to ensure Krita processes the key presses
                     }
                 }
             }
@@ -562,6 +608,8 @@ fn main() {
         DrawingSpeed::choice("How fast should the image be drawn?")
             .expect("Failed to get user input"),
     );
+    let line_order = LineOrder::choice("What order should each line be drawn in?")
+        .expect("Failed to get user input");
 
     println!("Move your cursor to select the region where you want to draw.");
     let (start_pos, end_pos) = app.capture_screen_region();
@@ -572,7 +620,7 @@ fn main() {
     loop {
         let keys = app.device_state.get_keys();
         if keys.contains(&device_query::Keycode::D) {
-            app.draw_image_optimized(&scaled_img, start_pos, drawing_speed, step);
+            app.draw_image_optimized(&scaled_img, start_pos, drawing_speed, step, line_order);
             break;
         } else if keys.contains(&device_query::Keycode::Q) {
             println!("Quitting...");

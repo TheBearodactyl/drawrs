@@ -9,7 +9,7 @@ pub(crate) trait Description {
 #[macro_export]
 macro_rules! choice {
     ($enum_name:ident, $($variant:ident => $desc:expr),+) => {
-	    #[derive(Debug, Copy, Clone, Choice)]
+	    #[derive(Debug, Copy, Clone, Choice, Ord, PartialOrd, Eq, PartialEq)]
 	    pub(crate) enum $enum_name {
 		    $($variant,)+
 	    }
@@ -55,6 +55,11 @@ choice!(DrawingSpeed,
     Fast => "Fast (10ms/line)",
     Medium => "Medium (50ms/line)",
     Slow => "Slow (200ms/line)"
+);
+
+choice!(LineOrder,
+	InOrder => "In Order - Draw each line in order",
+	Shuffled => "Shuffled - Shuffle the order of each drawn line before drawing"
 );
 
 pub(crate) fn get_step(drawing_accuracy: DrawingAccuracy) -> i32 {

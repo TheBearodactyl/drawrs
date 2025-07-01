@@ -1,4 +1,4 @@
-use crate::choices::{get_speed, get_step};
+use crate::choices::{get_speed, get_step, ImageProcessingMethod};
 use crate::drawing::components::find_connected_components_optimized;
 use crate::utils::geometry::Point;
 use crate::{
@@ -254,7 +254,10 @@ impl DrawingApp {
             }
         };
 
-        let bw_img = match ImageProcessor::process_image(&image_path) {
+        let processing_method =
+            ImageProcessingMethod::choice("Please select a method for processing the image")
+                .expect("Failed to get user input");
+        let bw_img = match ImageProcessor::process_image(&image_path, processing_method) {
             Ok(img) => img,
             Err(e) => {
                 println!("Error processing image: {}", e);
@@ -283,5 +286,11 @@ impl DrawingApp {
 
         println!("Ready to draw! Press 'D' to start drawing or 'Q' to quit");
         self.wait_for_drawing_command(&scaled_img, start_pos, drawing_speed, step, line_order);
+    }
+}
+
+impl Default for DrawingApp {
+    fn default() -> Self {
+        Self::new()
     }
 }

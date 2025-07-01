@@ -3,6 +3,14 @@ use crate::choices::*;
 use crate::utils::duration::DurExt;
 use std::time::Duration;
 
+choice!(ImageProcessingMethod,
+    Otsu => "Otsu's Method - Best for global thresholding and balanced histograms",
+    Kapur => "Kapur's Entropy - Best for textured/heterogeneous images",
+    Wolfs => "Wolf's Method - Best for degraded images",
+    Bernsens => "Bernsen's Method - Best for low-contrast images",
+    Sauvola => "Sauvola's Method - Best for noisy/textured backgrounds"
+);
+
 choice!(ScalingMode,
     Stretch => "Stretch - Fills entire region (may distort)",
     Fit => "Fit - Scales to fit within region (maintains aspect ratio)",

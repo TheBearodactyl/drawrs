@@ -6,10 +6,12 @@ use crate::{
     image_processing::{ImageProcessor, ImageScaler},
 };
 use device_query::{DeviceQuery, DeviceState, Keycode};
-use enigo::{Enigo, MouseButton, MouseControllable};
+use enigo::{Enigo, Mouse, Settings};
 use image::{ImageBuffer, Luma};
 use indicatif::{ProgressBar, ProgressStyle};
-use native_dialog::FileDialog;
+use inquire::error::InquireResult;
+use inquire::prompt_u32;
+use native_dialog::DialogBuilder;
 use rand::rng;
 use rand::seq::SliceRandom;
 use rayon::iter::ParallelIterator;
@@ -26,7 +28,7 @@ pub struct DrawingApp {
 impl DrawingApp {
     pub fn new() -> Self {
         DrawingApp {
-            enigo: Enigo::new(),
+            enigo: Enigo::new(&Settings::default()).expect("Failed to initialize enigo"),
             device_state: DeviceState::new(),
         }
     }
@@ -37,33 +39,29 @@ impl DrawingApp {
     }
 
     fn select_image() -> Option<String> {
-        FileDialog::new()
-            .add_filter("Image Files", &["png", "jpg", "jpeg", "gif"])
-            .show_open_single_file()
-            .ok()?
-            .map(|path| path.to_string_lossy().into_owned())
+        DialogBuilder::file()
+            .add_filter("Image Files", ["png", "jpg", "jpeg"])
+            .open_single_file()
+            .show()
+            .expect("Failed")
+            .map(|file| file.display().to_string())
     }
 
     fn select_scaling_mode(&self) -> ScalingMode {
         ScalingMode::choice("Please select a scaling method").expect("Failed to get user input")
     }
 
-    fn capture_screen_region(&self) -> ((i32, i32), (i32, i32)) {
-        let capture_method = RegionPickMode::choice("How would you like to select the region?")
-            .expect("Failed to get user input");
+    fn capture_screen_region(&self) -> InquireResult<((i32, i32), (i32, i32))> {
+        let capture_method = RegionPickMode::choice("How would you like to select the region?")?;
 
         let (start_pos, end_pos) = match capture_method {
             RegionPickMode::Manual => {
-                let tlx = inquire::prompt_u32("Please input the X value of the top left corner")
-                    .expect("Failed to get user input") as i32;
-                let tly = inquire::prompt_u32("Please input the Y value of the top left corner")
-                    .expect("Failed to get user input") as i32;
-                let brx = inquire::prompt_u32("Please input the X value of the bottom right corner")
-                    .expect("Failed to get user input") as i32;
-                let bry = inquire::prompt_u32("Please input the Y value of the bottom right corner")
-                    .expect("Failed to get user input") as i32;
+                let tlx = prompt_u32("Please input the X value of the top left corner")? as i32;
+                let tly = prompt_u32("Please input the Y value of the top left corner")? as i32;
+                let brx = prompt_u32("Please input the X value of the bottom right corner")? as i32;
+                let bry = prompt_u32("Please input the Y value of the bottom right corner")? as i32;
 
-                return ((tlx, tly), (brx, bry));
+                return Ok(((tlx, tly), (brx, bry)));
             }
             RegionPickMode::Interactive => {
                 println!("Press 'S' to start selecting region");
@@ -81,7 +79,7 @@ impl DrawingApp {
             }
         };
 
-        (start_pos, end_pos)
+        Ok((start_pos, end_pos))
     }
 
     fn wait_for_key(&self, target_key: Keycode) {
@@ -149,7 +147,7 @@ impl DrawingApp {
         let progress_style = ProgressStyle::default_bar()
             .template("{wide_bar} {pos}/{len} ({eta})")
             .expect("Invalid progress style template")
-            .progress_chars("=>=");
+            .progress_chars("=>-");
         let pb = ProgressBar::new(lines.len() as u64);
         pb.set_style(progress_style);
 
@@ -170,16 +168,20 @@ impl DrawingApp {
 
             if keys.contains(&Keycode::Q) {
                 pb.finish_with_message("Cancelled");
-                break;
+                std::process::exit(0);
             }
 
             let abs_start_x = start_pos.0 + line[0].x;
             let abs_start_y = start_pos.1 + line[0].y;
 
-            self.enigo.mouse_move_to(abs_start_x, abs_start_y);
+            self.enigo
+                .move_mouse(abs_start_x, abs_start_y, enigo::Coordinate::Abs)
+                .expect("Failed to move mouse");
             thread::sleep(drawing_speed);
 
-            self.enigo.mouse_down(MouseButton::Left);
+            self.enigo
+                .button(enigo::Button::Left, enigo::Direction::Press)
+                .expect("Failed to click mouse button");
 
             for points_chunk in line.windows(2) {
                 let current = points_chunk[0];
@@ -195,14 +197,18 @@ impl DrawingApp {
 
                         let abs_x = start_pos.0 + interp_x as i32;
                         let abs_y = start_pos.1 + interp_y as i32;
-                        self.enigo.mouse_move_to(abs_x, abs_y);
+                        self.enigo
+                            .move_mouse(abs_x, abs_y, enigo::Coordinate::Abs)
+                            .expect("Failed to move mouse");
 
                         thread::sleep(drawing_speed);
                     }
                 } else {
                     let abs_x = start_pos.0 + next.x;
                     let abs_y = start_pos.1 + next.y;
-                    self.enigo.mouse_move_to(abs_x, abs_y);
+                    self.enigo
+                        .move_mouse(abs_x, abs_y, enigo::Coordinate::Abs)
+                        .expect("Failed to move mouse");
 
                     if !drawing_speed.is_zero() {
                         thread::sleep(drawing_speed);
@@ -210,7 +216,9 @@ impl DrawingApp {
                 }
             }
 
-            self.enigo.mouse_up(MouseButton::Left);
+            self.enigo
+                .button(enigo::Button::Left, enigo::Direction::Release)
+                .expect("Failed to release mouse button");
             thread::sleep(drawing_speed);
             pb.inc(1);
         }
@@ -280,7 +288,9 @@ impl DrawingApp {
             .expect("Failed to get user input");
 
         println!("Move your cursor to select the region where you want to draw.");
-        let (start_pos, end_pos) = self.capture_screen_region();
+        let (start_pos, end_pos) = self
+            .capture_screen_region()
+            .expect("Failed to capture screen region");
         let scaled_img =
             ImageScaler::scale_image_to_region(&bw_img, start_pos, end_pos, scaling_mode);
 

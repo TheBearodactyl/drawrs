@@ -628,4 +628,6 @@ fn main() {
         }
         thread::sleep(Duration::from_millis(10));
     }
+
+    std::process:exit(1);
 }

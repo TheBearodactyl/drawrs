@@ -1,7 +1,7 @@
 use crate::utils::geometry::Point;
 use std::collections::{HashMap, HashSet};
 
-pub fn find_next_point_optimized(
+pub fn find_next_point(
     current: Point,
     spatial_index: &HashMap<(i32, i32), Vec<Point>>,
     visited: &HashSet<Point>,
@@ -34,7 +34,7 @@ pub fn find_next_point_optimized(
     best_point
 }
 
-pub fn trace_line_optimized(
+pub fn trace_line(
     start: Point,
     spatial_index: &HashMap<(i32, i32), Vec<Point>>,
     visited: &mut HashSet<Point>,
@@ -44,7 +44,7 @@ pub fn trace_line_optimized(
     visited.insert(start);
 
     while let Some(next) =
-        find_next_point_optimized(*line.last().unwrap(), spatial_index, visited, max_distance)
+        find_next_point(*line.last().unwrap(), spatial_index, visited, max_distance)
     {
         line.push(next);
         visited.insert(next);

@@ -1,5 +1,5 @@
 use crate::choices::{get_speed, get_step, ImageProcessingMethod};
-use crate::drawing::components::find_connected_components_optimized;
+use crate::drawing::components::find_connected_components;
 use crate::utils::geometry::Point;
 use crate::{
     choices::drawing::{DrawingAccuracy, DrawingSpeed, LineOrder, RegionPickMode, ScalingMode},
@@ -123,7 +123,7 @@ impl DrawingApp {
         black_pixels.into_iter().collect()
     }
 
-    fn draw_image_optimized(
+    fn draw_image(
         &mut self,
         img: &ImageBuffer<Luma<u16>, Vec<u16>>,
         start_pos: (i32, i32),
@@ -142,7 +142,7 @@ impl DrawingApp {
             return;
         }
 
-        let mut lines = find_connected_components_optimized(black_pixels, 3);
+        let mut lines = find_connected_components(black_pixels, 3);
         println!("Generated {} drawing paths", lines.len());
         let progress_style = ProgressStyle::default_bar()
             .template("{wide_bar} {pos}/{len} ({eta})")
@@ -241,7 +241,7 @@ impl DrawingApp {
         loop {
             let keys = self.device_state.get_keys();
             if keys.contains(&Keycode::D) {
-                self.draw_image_optimized(scaled_img, start_pos, drawing_speed, step, line_order);
+                self.draw_image(scaled_img, start_pos, drawing_speed, step, line_order);
                 break;
             } else if keys.contains(&Keycode::Q) {
                 println!("Quitting!");

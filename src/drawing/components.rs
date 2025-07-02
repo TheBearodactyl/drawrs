@@ -1,4 +1,4 @@
-use crate::drawing::pathfinding::trace_line_optimized;
+use crate::drawing::pathfinding::trace_line;
 use crate::utils::geometry::Point;
 use std::collections::{HashMap, HashSet};
 
@@ -20,10 +20,7 @@ pub fn build_spatial_index(
     spatial_index
 }
 
-pub fn find_connected_components_optimized(
-    points: HashSet<Point>,
-    max_distance: i32,
-) -> Vec<Vec<Point>> {
+pub fn find_connected_components(points: HashSet<Point>, max_distance: i32) -> Vec<Vec<Point>> {
     let spatial_index = build_spatial_index(&points, max_distance.max(1));
     let mut visited = HashSet::new();
     let mut lines = Vec::new();
@@ -33,8 +30,7 @@ pub fn find_connected_components_optimized(
 
     for start_point in sorted_points {
         if !visited.contains(&start_point) {
-            let line =
-                trace_line_optimized(start_point, &spatial_index, &mut visited, max_distance);
+            let line = trace_line(start_point, &spatial_index, &mut visited, max_distance);
 
             if line.len() > 2 {
                 lines.push(line);

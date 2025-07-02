@@ -1,24 +1,20 @@
-use crate::choices::{get_speed, get_step, ImageProcessingMethod};
-use crate::drawing::components::find_connected_components;
-use crate::utils::geometry::Point;
-use crate::{
-    choices::drawing::{DrawingAccuracy, DrawingSpeed, LineOrder, RegionPickMode, ScalingMode},
-    image_processing::{ImageProcessor, ImageScaler},
+use {
+    crate::{
+        choices::*,
+        drawing::components::find_connected_components,
+        image_processing::{ImageProcessor, ImageScaler},
+        utils::geometry::Point,
+    },
+    device_query::{DeviceQuery, DeviceState, Keycode},
+    enigo::{Enigo, Mouse, Settings},
+    image::{ImageBuffer, Luma},
+    indicatif::{ProgressBar, ProgressStyle},
+    inquire::{error::InquireResult, prompt_u32},
+    native_dialog::DialogBuilder,
+    rand::{rng, seq::SliceRandom},
+    rayon::{iter::ParallelIterator, prelude::IntoParallelRefIterator},
+    std::{collections::HashSet, thread, time::Duration},
 };
-use device_query::{DeviceQuery, DeviceState, Keycode};
-use enigo::{Enigo, Mouse, Settings};
-use image::{ImageBuffer, Luma};
-use indicatif::{ProgressBar, ProgressStyle};
-use inquire::error::InquireResult;
-use inquire::prompt_u32;
-use native_dialog::DialogBuilder;
-use rand::rng;
-use rand::seq::SliceRandom;
-use rayon::iter::ParallelIterator;
-use rayon::prelude::IntoParallelRefIterator;
-use std::collections::HashSet;
-use std::thread;
-use std::time::Duration;
 
 pub struct DrawingApp {
     enigo: Enigo,

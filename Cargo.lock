@@ -376,7 +376,7 @@ dependencies = [
 
 [[package]]
 name = "drawrs"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "device_query",
  "enigo",
@@ -703,15 +703,12 @@ dependencies = [
 
 [[package]]
 name = "inquiry"
-version = "0.1.0"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a960b446df142e1a27daf225e2271f940240d83b16e073961ae5acc245d5cd6"
+checksum = "3c53dfc4f5fb35e7bd8ebe6134cb1850a59c14ed0489cfd7ade66b6876f7d5a5"
 dependencies = [
  "inquire",
- "proc-macro2",
  "quote",
- "serde",
- "serde_json",
  "syn",
 ]
 
@@ -743,12 +740,6 @@ checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
 dependencies = [
  "either",
 ]
-
-[[package]]
-name = "itoa"
-version = "1.0.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jobserver"
@@ -1598,12 +1589,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7c45b9784283f1b2e7fb61b42047c2fd678ef0960d4f6f1eba131594cc369d4"
 
 [[package]]
-name = "ryu"
-version = "1.0.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
-
-[[package]]
 name = "safe_arch"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1636,18 +1621,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "serde_json"
-version = "1.0.140"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20068b6e96dc6c9bd23e01df8827e6c7e1f2fddd43c21810382803c136b99373"
-dependencies = [
- "itoa",
- "memchr",
- "ryu",
- "serde",
 ]
 
 [[package]]
